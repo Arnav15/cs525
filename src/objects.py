@@ -13,6 +13,7 @@ class BlockchainObject(abc.ABC):
     def serialize(self):
         pass
 
+
 @BlockchainObject.register
 class Transaction(BlockchainObject):
 
@@ -75,6 +76,7 @@ class State(BlockchainObject):
 
     def __init__(self, utxo=dict()):
         self.utxo = utxo
+        self.is_stale = False
 
     def add_coin(self, coin):
         self.utxo[coin.coin_id] = coin
