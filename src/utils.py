@@ -35,3 +35,7 @@ def verify_signature(pk, data, sig):
 
 def generate_hash(data):
     return SHA256.new(data).digest()
+
+
+def merkle_root(items):
+    pass
