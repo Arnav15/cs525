@@ -1,5 +1,6 @@
 import abc
 import pickle
+
 import utils
 
 
@@ -34,7 +35,8 @@ class Transaction(BlockchainObject):
         pickle.dump(self, protocol=pickle.HIGHEST_PROTOCOL)
 
     def serialize(self):
-        return ''.join([self.src_pk, self.dst_pk, self.value])
+        items = [self.src_pk, self.dst_pk, self.value]
+        return bytearray(''.join(map(str, items)), encoding='UTF-8')
 
 
 @BlockchainObject.register
@@ -107,4 +109,5 @@ class Coin(BlockchainObject):
         pickle.dump(self, protocol=pickle.HIGHEST_PROTOCOL)
 
     def serialize(self):
-        return ''.join([self.owner, self.value, self.parent_txn])
+        items = [self.owner, self.value, self.parent_txn]
+        return bytearray(''.join(map(str, items)), encoding='UTF-8')

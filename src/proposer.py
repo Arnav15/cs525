@@ -32,11 +32,12 @@ class Proposer(object):
         if self.transient_state.is_stale:
             self.transient_state = deepcopy(self.state)
 
-        if self._update_state(txn):
+        if self._update_transient_state(txn):
+            # transaction successfully added
             self.txn_pool.add(txn)
             self._broadcast_transaction(txn)
 
-    def _update_state(self, txn):
+    def _update_transient_state(self, txn):
         # verify signature
         if not utils.verify_signature(
                 self.src_pk, txn.serialize(), self.src_sig):
@@ -44,9 +45,11 @@ class Proposer(object):
             return False
 
         total_input_value = 0.
+        coins_to_remove = list()
         # verify src_pk owns inputs
         for coin_id in inputs:
-            coin = self.transient_state.remove_coin(coin_id)
+            coin = self.transient_state.get_coin(coin_id)
+            coins_to_remove.append(coin_id)
             if coin.owner != txn.src_pk:
                 self.logger.warn('Coin not owned by sender')
                 return False
@@ -56,8 +59,11 @@ class Proposer(object):
             self.logger.warn('Not enough coins')
             return False
 
-        leftover = total_input_value - txn.value
+        # transaction verification complete, remove the coins
+        self.logger.debug(f'Consuming coins: {coins_to_remove}')
+        map(self.transient_state.get_coin, coins_to_remove)
 
+        leftover = total_input_value - txn.value
         if leftover > 0.:
             # mint a new coin (src_pk, leftover)
             coin = Coin(owner=txn.src_pk, value=leftover,
@@ -84,10 +90,13 @@ class Proposer(object):
 
 class BlockchainProtocol(asyncio.DatagramProtocol):
 
+    DEFAULT_PORT = 9991
+
     def __init__(self):
         self.logger = logging.getLogger(BlockchainProtocol.__name__)
 
     def connection_made(self, transport):
+        self.logger.info(f'Got connection: {transport}')
         self.transport = transport
 
     def connection_lost(self, exc):
@@ -108,8 +117,13 @@ class BlockchainProtocol(asyncio.DatagramProtocol):
 def main():
     loop = asyncio.get_event_loop()
 
+    if len(sys.argv) > 1:
+        port = int(sys.argv[1])
+    else:
+        port = BlockchainProtocol.DEFAULT_PORT
+
     udp_listener = loop.create_datagram_endpoint(
-        BlockchainProtocol, local_addr=('0.0.0.0', 9999))
+        BlockchainProtocol, local_addr=('0.0.0.0', port))
     loop.run_until_complete(udp_listener)
 
     try:
@@ -121,4 +135,11 @@ def main():
 
 
 if __name__ == '__main__':
+    # setup logging
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format='%(levelname)s | %(asctime)s | %(name)s | %(message)s',
+        filename='proposer.log',
+        filemode='w')
+
     main()
