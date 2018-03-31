@@ -42,35 +42,64 @@ class Transaction(BlockchainObject):
 @BlockchainObject.register
 class CollationHeader(BlockchainObject):
 
-    def __init__(self, collation_id=None, shard_id=None, parent_hash=None,
-                 txns_merkle_root=None, proposer_sig=None,
-                 creation_timestamp=None):
-        self.collation_id = collation_id
+    def __init__(self, shard_id=None, parent_hash=None,
+                 txns_merkle_root=None, creation_timestamp=None,
+                 proposer_sig=None):
         self.shard_id = shard_id
         self.parent_hash = parent_hash
         self.txns_merkle_root = txns_merkle_root
-        self.proposer_sig = proposer_sig
         self.creation_timestamp = creation_timestamp
+
+        self.proposer_sig = proposer_sig
+        self.collation_id = None
 
     def to_pickle(self):
         pickle.dump(self, protocol=pickle.HIGHEST_PROTOCOL)
 
     def serialize(self):
-        pass
+        items = [self.shard_id, self.parent_hash, self.txns_merkle_root,
+                 self.creation_timestamp]
+        if self.proposer_sig is not None:
+            items.append(self.proposer_sig)
+        return bytearray(''.join(map(str, items)), encoding='UTF-8')
 
 
 @BlockchainObject.register
 class Collation(BlockchainObject):
 
-    def __init__(self, header=None, transactions=list()):
-        self.header = header
+    MAX_TXN_COUNT = 5
+
+    def __init__(self, shard_id=None, parent_hash=None,
+                 txns_merkle_root=None, creation_timestamp=None,
+                 sign_callable=None, proposer_sig=None,
+                 transactions=list()):
+
         self.transactions = transactions
+        if txns_merkle_root is None:
+            # generate the merkle root
+            txns_merkle_root = utils.merkle_root(transactions)
+
+        self.header = CollationHeader(
+            shard_id=shard_id, parent_hash=parent_hash,
+            txns_merkle_root=txns_merkle_root,
+            creation_timestamp=creation_timestamp,
+            proposer_sig=proposer_sig)
+
+        # if no signature was provided, create it
+        if proposer_sig is None:
+            self.header.proposer_sig = sign_callable(self.serialize())
+
+        # generate the collation hash (id)
+        self.header.collation_id = utils.generate_hash(self.serialize())
 
     def to_pickle(self):
         pickle.dump(self, protocol=pickle.HIGHEST_PROTOCOL)
 
     def serialize(self):
-        pass
+        items = list()
+        items.append(self.header.serialize())
+        items.extend(map(lambda txn: txn.serialize(), self.transactions))
+        return bytearray(''.join(map(str, items)), encoding='UTF-8')
 
 
 @BlockchainObject.register

@@ -1,20 +1,31 @@
+import argparse
 import logging
+import os
 import pickle
-import sys
 
 from copy import deepcopy
+from datetime import datetime
 
+from blockchain import Blockchain
 from objects import *
 import utils
 
 
 class Proposer(object):
 
-    def __init__(self):
+    RSA_KEY_FILE = 'rsakey.pem'
+
+    def __init__(self, rsa_key_file=Proposer.RSA_KEY_FILE):
         self.logger = logging.getLogger(Proposer.__name__)
         self.state = State()
         self.transient_state = State()
         self.txn_pool = set()
+        self.blockchain = Blockchain()
+        self.rsa_key = utils.get_rsa_key(rsa_key_file)
+
+        if self.rsa_key is None:
+            self.rsa_key = utils.generate_rsa_key()
+            utils.save_rsa_key(self.rsa_key)
 
     def handle_message(self, message):
         if isinstance(message, Transaction):
@@ -39,7 +50,7 @@ class Proposer(object):
     def _update_transient_state(self, txn):
         # verify signature
         if not utils.verify_signature(
-                self.src_pk, txn.serialize(), self.src_sig):
+                txn.src_pk, txn.serialize(), txn.src_sig):
             self.logger.warn('Invalid signature')
             return False
 
@@ -86,13 +97,38 @@ class Proposer(object):
         # TODO: broadcast function
         pass
 
+    async def create_collation(self):
+        while True:
+            if len(self.txn_pool) < Collation.MAX_TXN_COUNT:
+                yield
+                continue
+
+            sign_callable = lambda data: utils.generate_signature(self.rsa_key, data)
+
+            transactions = list()
+            for _ in range(Collation.MAX_TXN_COUNT):
+                transactions.append(self.txn_pool.pop())
+
+            collation = Collation(
+                shard_id=0,
+                parent_hash=self.blockchain.get_head(),
+                sign_callable=sign_callable,
+                creation_timestamp=datetime.now().isoformat(),
+                transactions=transactions)
+
+            # add this collation to the chain
+            self.blockchain.add_block(collation)
+
+            yield
+
 
 class BlockchainProtocol(asyncio.DatagramProtocol):
 
     DEFAULT_PORT = 9991
 
-    def __init__(self):
+    def __init__(self, proposer):
         self.logger = logging.getLogger(BlockchainProtocol.__name__)
+        self.proposer = proposer
 
     def connection_made(self, transport):
         self.logger.info(f'Got connection: {transport}')
@@ -107,13 +143,13 @@ class BlockchainProtocol(asyncio.DatagramProtocol):
         except pickle.UnpicklingError:
             self.logger.error('Message parsing error')
 
-        Proposer.handle_message(message)
+        proposer.handle_message(message)
 
     def error_received(self, exc):
         pass
 
 
-def main():
+def main(key_file=None):
     loop = asyncio.get_event_loop()
 
     if len(sys.argv) > 1:
@@ -121,8 +157,12 @@ def main():
     else:
         port = BlockchainProtocol.DEFAULT_PORT
 
+    proposer = Proposer(key_file)
+    loop.create_task(proposer.create_collation())
+
     udp_listener = loop.create_datagram_endpoint(
-        BlockchainProtocol, local_addr=('0.0.0.0', port))
+        lambda: BlockchainProtocol(proposer),
+        local_addr=('0.0.0.0', port))
     loop.run_until_complete(udp_listener)
 
     try:
@@ -133,12 +173,32 @@ def main():
     loop.close()
 
 
+def parse_arguments():
+    parser = argparse.ArgumentParser(description='AuntyMatter Proposer')
+
+    parser.add_argument('--key-file',
+        dest='key_file', default=None,
+        help='The .pem key file for this Proposer')
+    parser.add_argument('--log-file',
+        dest='log_file', default='proposer.log',
+        help='The file to write output log to')
+    parser.add_argument('--log-level',
+        dest='log_level', default='INFO', help='The log level',
+        choices=['DEBUG', 'INFO', 'WARNING'])
+
+    return args.parse_args()
+
+
 if __name__ == '__main__':
+    args = parse_arguments()
+
+    log_level = getattr(logging, args.log_level)
+
     # setup logging
     logging.basicConfig(
-        level=logging.DEBUG,
+        level=log_level,
         format='%(levelname)s | %(asctime)s | %(name)s | %(message)s',
-        filename='proposer.log',
+        filename=args.log_file,
         filemode='w')
 
     main()
