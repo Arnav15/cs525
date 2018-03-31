@@ -10,6 +10,7 @@ import utils
 class Proposer(object):
 
     def __init__(self):
+        self.logger = logging.getLogger(Proposer.__name__)
         self.state = State()
 
     def handle_message(self, message):
@@ -19,9 +20,17 @@ class Proposer(object):
         self.logger.error('Received message cannot be handled by Proposer')
 
     def handle_transaction(self, txn):
+        self.logger.info(f'Received transaction: {txn}')
+
+        self.update_state(txn)
+
+        # TODO: broadcast function
+
+    def update_state(self, txn):
         # verify signature
         if not utils.verify_signature(
             self.src_pk, txn.serialize(), self.src_sig):
+            self.logger.warn('Invalid signature')
             return
 
         total_input_value = 0.
@@ -46,7 +55,6 @@ class Proposer(object):
         coin = Coin(owner=txn.dest_pk, value=txn.value, parent_txn=txn.txn_id)
         self.state.add_coin(coin)
 
-        # TODO: broadcast function
 
 class BlockchainProtocol(asyncio.DatagramProtocol):
 

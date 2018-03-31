@@ -25,6 +25,10 @@ class Transaction(BlockchainObject):
         self.src_sig = src_sig
         self.txn_id = utils.generate_hash(self.serialize())
 
+    def __str__(self):
+        return (f'src_pk={self.src_pk},dst_pk={self.dst_pk},'
+                f'value={self.value},txn_id={self.txn_id}')
+
     def to_pickle(self):
         pickle.dump(self, protocol=pickle.HIGHEST_PROTOCOL)
 
