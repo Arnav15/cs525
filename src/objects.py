@@ -1,5 +1,6 @@
 import abc
 import pickle
+import utils
 
 
 class BlockchainObject(abc.ABC):
@@ -8,21 +9,27 @@ class BlockchainObject(abc.ABC):
     def to_pickle(self):
         pass
 
+    @abc.abstractmethod
+    def serialize(self):
+        pass
 
 @BlockchainObject.register
 class Transaction(BlockchainObject):
 
-    def __init__(self, txn_id=None, src_pk=None, dst_pk=None, amount=None,
-                 src_sig=None, creation_timestamp=None):
-        self.txn_id = txn_id
+    def __init__(self, src_pk=None, dst_pk=None, inputs=list(),
+                 value=None, src_sig=None):
         self.src_pk = src_pk
         self.dst_pk = dst_pk
-        self.amount = amount
+        self.inputs = inputs
+        self.value = value
         self.src_sig = src_sig
-        self.creation_timestamp = creation_timestamp
+        self.txn_id = utils.generate_hash(self.serialize())
 
     def to_pickle(self):
         pickle.dump(self, protocol=pickle.HIGHEST_PROTOCOL)
+
+    def serialize(self):
+        return ''.join([self.src_pk, self.dst_pk, self.value])
 
 
 @BlockchainObject.register
@@ -41,6 +48,9 @@ class CollationHeader(BlockchainObject):
     def to_pickle(self):
         pickle.dump(self, protocol=pickle.HIGHEST_PROTOCOL)
 
+    def serialize(self):
+        pass
+
 
 @BlockchainObject.register
 class Collation(BlockchainObject):
@@ -52,18 +62,43 @@ class Collation(BlockchainObject):
     def to_pickle(self):
         pickle.dump(self, protocol=pickle.HIGHEST_PROTOCOL)
 
+    def serialize(self):
+        pass
+
 
 @BlockchainObject.register
 class State(BlockchainObject):
 
-    def __init__(self, balances=dict()):
-        self.balances = balances
+    def __init__(self, utxo=dict()):
+        self.utxo = utxo
 
-    def update_balance(self, pk, amount):
-        self.balances[pk] = amount
+    def add_coin(self, coin):
+        self.utxo[coin.coin_id] = coin
 
-    def get_balance(self, pk):
-        return self.balances.get(pk, 0)
+    def get_coin(self, coin_id):
+        return self.utxo.get(coin_id, None)
+
+    def remove_coin(self, coin_id):
+        return self.utxo.pop(coin_id)
 
     def to_pickle(self):
         pickle.dump(self, protocol=pickle.HIGHEST_PROTOCOL)
+
+    def serialize(self):
+        pass
+
+
+@BlockchainObject.register
+class Coin(BlockchainObject):
+
+    def __init__(self, owner=None, value=None, parent_txn=None):
+        self.owner = owner
+        self.value = value
+        self.parent_txn = parent_txn
+        self.coin_id = utils.generate_hash(self.serialize())
+
+    def to_pickle(self):
+        pickle.dump(self, protocol=pickle.HIGHEST_PROTOCOL)
+
+    def serialize(self):
+        return ''.join([self.owner, self.value, self.parent_txn])
