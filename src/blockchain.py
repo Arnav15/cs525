@@ -22,4 +22,4 @@ class Blockchain(object):
         self._nodes[block_hash] = new_block
 
     def verify_block(self):
-        
+        pass

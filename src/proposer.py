@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import pickle
 import sys
@@ -61,7 +60,7 @@ class Proposer(object):
 
         # transaction verification complete, remove the coins
         self.logger.debug(f'Consuming coins: {coins_to_remove}')
-        map(self.transient_state.get_coin, coins_to_remove)
+        map(self.transient_state.remove_coin, coins_to_remove)
 
         leftover = total_input_value - txn.value
         if leftover > 0.:
