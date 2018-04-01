@@ -27,10 +27,13 @@ class Network:
 
         def connection_made(self, transport):
             ip = transport.get_extra_info('peername')[0]
+            self.transport = transport
+            self.ip = ip
             self.node.network.connections[ip] = transport
 
         def connection_lost(self, exc):
-            pass
+            self.node.network.connections[self.ip].close()
+            del self.node.network.connections[self.ip]
 
         def data_received(self, data):
             try:

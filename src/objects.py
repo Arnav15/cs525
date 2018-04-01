@@ -72,12 +72,12 @@ class Collation(BlockchainObject):
     def __init__(self, shard_id=None, parent_hash=None,
                  txns_merkle_root=None, creation_timestamp=None,
                  sign_callable=None, proposer_sig=None,
-                 transactions=list()):
+                 txns=list()):
 
-        self.transactions = transactions
+        self.txns = txns
         if txns_merkle_root is None:
             # generate the merkle root
-            txns_merkle_root = utils.merkle_root(transactions)
+            txns_merkle_root = utils.merkle_root(txns)
 
         self.header = CollationHeader(
             shard_id=shard_id, parent_hash=parent_hash,
@@ -98,7 +98,7 @@ class Collation(BlockchainObject):
     def serialize(self):
         items = list()
         items.append(self.header.serialize())
-        items.extend(map(lambda txn: txn.serialize(), self.transactions))
+        items.extend(map(lambda txn: txn.serialize(), self.txns))
         return bytearray(''.join(map(str, items)), encoding='UTF-8')
 
 
@@ -107,7 +107,6 @@ class State(BlockchainObject):
 
     def __init__(self, utxo=dict()):
         self.utxo = utxo
-        self.is_stale = False
 
     def add_coin(self, coin):
         self.utxo[coin.coin_id] = coin

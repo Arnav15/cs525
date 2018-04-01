@@ -24,8 +24,7 @@ class Proposer(object):
             rsa_key_file = Proposer.RSA_KEY_FILE
 
         self.state = State()
-        self.transient_state = State()
-        self.txn_pool = set()
+        self.txn_pool = list()
         self.blockchain = Blockchain()
         self.rsa_key = utils.get_rsa_key(rsa_key_file)
 
@@ -52,26 +51,22 @@ class Proposer(object):
     def handle_transaction(self, txn):
         self.logger.info(f'Received transaction: {txn}')
 
-        if self.transient_state.is_stale:
-            self.transient_state = deepcopy(self.state)
-
-        if self._update_transient_state(txn):
-            # transaction successfully added
-            self.txn_pool.add(txn)
-            self._broadcast_transaction(txn)
-
-    def _update_transient_state(self, txn):
         # verify signature
         if not utils.verify_signature(
                 txn.src_pk, txn.serialize(), txn.src_sig):
             self.logger.warn('Invalid signature')
             return False
 
+        # transaction successfully added
+        self.txn_pool.add(txn)
+        self._broadcast_transaction(txn)
+
+    def _validate_txn(self, transient_state, txn):
         total_input_value = 0.
         coins_to_remove = list()
         # verify src_pk owns inputs
-        for coin_id in inputs:
-            coin = self.transient_state.get_coin(coin_id)
+        for coin_id in txn.inputs:
+            coin = transient_state.get_coin(coin_id)
             coins_to_remove.append(coin_id)
             if coin.owner != txn.src_pk:
                 self.logger.warn('Coin not owned by sender')
@@ -84,18 +79,18 @@ class Proposer(object):
 
         # transaction verification complete, remove the coins
         self.logger.debug(f'Consuming coins: {coins_to_remove}')
-        map(self.transient_state.remove_coin, coins_to_remove)
+        map(transient_state.remove_coin, coins_to_remove)
 
         leftover = total_input_value - txn.value
         if leftover > 0.:
             # mint a new coin (src_pk, leftover)
             coin = Coin(owner=txn.src_pk, value=leftover,
                         parent_txn=txn.txn_id)
-            self.transient_state.add_coin(coin)
+            transient_state.add_coin(coin)
 
         # mint a new coin (dest_pk, total_input_value)
         coin = Coin(owner=txn.dest_pk, value=txn.value, parent_txn=txn.txn_id)
-        self.transient_state.add_coin(coin)
+        transient_state.add_coin(coin)
 
         return True
 
@@ -119,19 +114,32 @@ class Proposer(object):
             def sign_callable(data):
                 return utils.generate_signature(self.rsa_key, data)
 
-            transactions = list()
-            for _ in range(Collation.MAX_TXN_COUNT):
-                transactions.append(self.txn_pool.pop())
+            txns = list()
+            num_txns = 0
+            transient_state = deepcopy(self.state)
+            while num_txns < Collation.MAX_TXN_COUNT and len(self.txn_pool) > 0:
+                new_txn = self.txn_pool.pop()
+                if _validate_txn(transient_state, txn):
+                    txns.append(new_txn)
+                    num_txns += 1
+
+            if num_txns < Collation.MAX_TXN_COUNT:
+                self.txn_pool.extend(txns)
+                yield
+                continue
 
             collation = Collation(
                 shard_id=0,
                 parent_hash=self.blockchain.get_head(),
                 sign_callable=sign_callable,
                 creation_timestamp=datetime.now().isoformat(),
-                transactions=transactions)
+                txns=txns)
 
             # add this collation to the chain
             self.blockchain.add_block(collation)
+
+            # update the state
+            self.state = transient_state
 
             yield
 
