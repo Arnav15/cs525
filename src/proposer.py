@@ -1,6 +1,5 @@
 import argparse
 import logging
-import os
 import pickle
 
 from copy import deepcopy
@@ -103,7 +102,8 @@ class Proposer(object):
                 yield
                 continue
 
-            sign_callable = lambda data: utils.generate_signature(self.rsa_key, data)
+            def sign_callable(data):
+                return utils.generate_signature(self.rsa_key, data)
 
             transactions = list()
             for _ in range(Collation.MAX_TXN_COUNT):
@@ -177,14 +177,14 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description='AuntyMatter Proposer')
 
     parser.add_argument('--key-file',
-        dest='key_file', default=None,
-        help='The .pem key file for this Proposer')
+                        dest='key_file', default=None,
+                        help='The .pem key file for this Proposer')
     parser.add_argument('--log-file',
-        dest='log_file', default='proposer.log',
-        help='The file to write output log to')
+                        dest='log_file', default='proposer.log',
+                        help='The file to write output log to')
     parser.add_argument('--log-level',
-        dest='log_level', default='INFO', help='The log level',
-        choices=['DEBUG', 'INFO', 'WARNING'])
+                        dest='log_level', default='INFO', help='The log level',
+                        choices=['DEBUG', 'INFO', 'WARNING'])
 
     return args.parse_args()
 
