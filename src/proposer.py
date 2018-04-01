@@ -1,11 +1,13 @@
 import argparse
+import asyncio
 import logging
-import pickle
+import sys
 
 from copy import deepcopy
 from datetime import datetime
 
 from blockchain import Blockchain
+from discovery import Network
 from objects import *
 import utils
 
@@ -14,8 +16,10 @@ class Proposer(object):
 
     RSA_KEY_FILE = 'rsakey.pem'
 
-    def __init__(self, rsa_key_file=Proposer.RSA_KEY_FILE):
+    def __init__(self, port=None, rsa_key_file=Proposer.RSA_KEY_FILE):
         self.logger = logging.getLogger(Proposer.__name__)
+        self.evloop = asyncio.get_event_loop()
+
         self.state = State()
         self.transient_state = State()
         self.txn_pool = set()
@@ -25,6 +29,13 @@ class Proposer(object):
         if self.rsa_key is None:
             self.rsa_key = utils.generate_rsa_key()
             utils.save_rsa_key(self.rsa_key)
+
+        # get and create connections
+        self.network = Network(self, self.evloop)
+        self.evloop.run_until_complete(self.network.get_membership_list())
+        self.evloop.run_until_complete(self.network.create_connections())
+        # create TCP endpoint for incoming connections
+        self.evloop.run_until_complete(self.network.create_endpoint(port))
 
     def handle_message(self, message):
         if isinstance(message, Transaction):
@@ -122,48 +133,11 @@ class Proposer(object):
             yield
 
 
-class BlockchainProtocol(asyncio.DatagramProtocol):
-
-    DEFAULT_PORT = 9991
-
-    def __init__(self, proposer):
-        self.logger = logging.getLogger(BlockchainProtocol.__name__)
-        self.proposer = proposer
-
-    def connection_made(self, transport):
-        self.logger.info(f'Got connection: {transport}')
-        self.transport = transport
-
-    def connection_lost(self, exc):
-        pass
-
-    def datagram_received(self, data, addr):
-        try:
-            message = pickle.load(data)
-        except pickle.UnpicklingError:
-            self.logger.error('Message parsing error')
-
-        proposer.handle_message(message)
-
-    def error_received(self, exc):
-        pass
-
-
-def main(key_file=None):
+def main(args):
     loop = asyncio.get_event_loop()
 
-    if len(sys.argv) > 1:
-        port = int(sys.argv[1])
-    else:
-        port = BlockchainProtocol.DEFAULT_PORT
-
-    proposer = Proposer(key_file)
+    proposer = Proposer(args.port, args.key_file)
     loop.create_task(proposer.create_collation())
-
-    udp_listener = loop.create_datagram_endpoint(
-        lambda: BlockchainProtocol(proposer),
-        local_addr=('0.0.0.0', port))
-    loop.run_until_complete(udp_listener)
 
     try:
         loop.run_forever()
@@ -176,6 +150,9 @@ def main(key_file=None):
 def parse_arguments():
     parser = argparse.ArgumentParser(description='AuntyMatter Proposer')
 
+    parser.add_argument('-p', '--port',
+                        dest='port', default=None,
+                        help='Port to use to listen for incoming connections')
     parser.add_argument('--key-file',
                         dest='key_file', default=None,
                         help='The .pem key file for this Proposer')
@@ -186,7 +163,7 @@ def parse_arguments():
                         dest='log_level', default='INFO', help='The log level',
                         choices=['DEBUG', 'INFO', 'WARNING'])
 
-    return args.parse_args()
+    return parser.parse_args()
 
 
 if __name__ == '__main__':
@@ -201,4 +178,4 @@ if __name__ == '__main__':
         filename=args.log_file,
         filemode='w')
 
-    main()
+    main(args)
