@@ -30,10 +30,12 @@ class Network:
             self.transport = transport
             self.ip = ip
             self.node.network.connections[ip] = transport
+            self.logger.info(f'Got connection from: {self.ip}')
 
         def connection_lost(self, exc):
             self.node.network.connections[self.ip].close()
             del self.node.network.connections[self.ip]
+            self.logger.info(f'LOST connection from: {self.ip}')
 
         def data_received(self, data):
             try:
@@ -80,3 +82,8 @@ class Network:
         await self.evloop.create_server(
             lambda: Network.NetworkProtocol(self.node),
             host='0.0.0.0', port=port)
+
+    def broadcast_obj(self, obj):
+        pickled = obj.to_pickle()
+        for ip, transport in self.connections.iteritems():
+            transport.write(pickled)

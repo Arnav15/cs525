@@ -2,7 +2,7 @@ import argparse
 import asyncio
 import sys
 
-from discovery import BootstrapServerProtocol
+from p2p import BootstrapServerProtocol
 
 
 def main(args):

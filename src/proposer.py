@@ -1,14 +1,15 @@
 import argparse
 import asyncio
 import logging
+import random
 import sys
 
 from copy import deepcopy
 from datetime import datetime
 
 from blockchain import Blockchain
-from discovery import Network
 from objects import *
+from p2p import Network
 import utils
 
 
@@ -24,7 +25,7 @@ class Proposer(object):
             rsa_key_file = Proposer.RSA_KEY_FILE
 
         self.state = State()
-        self.txn_pool = list()
+        self.txn_pool = dict()
         self.blockchain = Blockchain()
         self.rsa_key = utils.get_rsa_key(rsa_key_file)
 
@@ -58,8 +59,8 @@ class Proposer(object):
             return False
 
         # transaction successfully added
-        self.txn_pool.add(txn)
-        self._broadcast_transaction(txn)
+        self.txn_pool[txn.txn_id] = txn
+        self.network.broadcast_obj(txn)
 
     def _validate_txn(self, transient_state, txn):
         total_input_value = 0.
@@ -94,16 +95,27 @@ class Proposer(object):
 
         return True
 
-    def _broadcast_transaction(self, txn):
-        # TODO: broadcast function
-        pass
+    def _verify_collation(self, new_collation):
+        # verify block hash
+        
+        # verify signature
+
+        # verify txns merkle root
+
+        # verify txns
 
     def handle_collation(self, collation):
-        pass
+        # check if the parent hash of the collation is the current root
+        if collation.header.parent_hash == self.blockchain.get_head():
+            self._verify_collation(collation)
+            self.blockchain.add_collation(collation)
 
-    def _broadcast_collation(self, collation):
-        # TODO: broadcast function
-        pass
+            # update txn pool
+            for txn in collation.txns:
+                if txn in self.txn_pool:
+                    del self.txn_pool[txn]
+        else:
+            self.blockchain.add_fork_node(collation)
 
     async def create_collation(self):
         while True:
@@ -111,20 +123,25 @@ class Proposer(object):
                 yield
                 continue
 
+            # RANDOM DELAY
+            while random.randint(1, 100) != 10:
+                yield
+                continue
+
             def sign_callable(data):
                 return utils.generate_signature(self.rsa_key, data)
 
-            txns = list()
+            txns = dict()
             num_txns = 0
             transient_state = deepcopy(self.state)
             while num_txns < Collation.MAX_TXN_COUNT and len(self.txn_pool) > 0:
-                new_txn = self.txn_pool.pop()
-                if _validate_txn(transient_state, txn):
-                    txns.append(new_txn)
+                new_txn_id, new_txn = self.txn_pool.popitem()
+                if _validate_txn(transient_state, new_txn):
+                    txns[new_txn_id] = new_txn
                     num_txns += 1
 
             if num_txns < Collation.MAX_TXN_COUNT:
-                self.txn_pool.extend(txns)
+                self.txn_pool.update(txns)
                 yield
                 continue
 
@@ -133,13 +150,13 @@ class Proposer(object):
                 parent_hash=self.blockchain.get_head(),
                 sign_callable=sign_callable,
                 creation_timestamp=datetime.now().isoformat(),
-                txns=txns)
+                txns=txns.values())
 
             # add this collation to the chain
-            self.blockchain.add_block(collation)
-
-            # update the state
+            self.blockchain.add_collation(collation)
             self.state = transient_state
+
+            self.network.broadcast_obj(collation)
 
             yield
 

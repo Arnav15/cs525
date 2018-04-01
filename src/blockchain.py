@@ -11,9 +11,9 @@ class Blockchain(object):
         self._nodes = dict()
         self.head = None
 
-    def add_block(self, new_block):
-        block_hash = new_block.header.collation_id
-        block_node = BlockchainNode(block_data=new_block)
+    def add_collation(self, new_collation):
+        block_hash = new_collation.header.collation_id
+        block_node = BlockchainNode(block_data=new_collation)
         self._nodes[block_hash] = block_node
 
         # set the child of the current head, and change current head
@@ -23,5 +23,7 @@ class Blockchain(object):
     def get_head(self):
         return self._nodes[self.head].data
 
-    def verify_block(self):
-        pass
+    def add_fork_node(self, new_collation):
+        block_hash = new_collation.header.collation_id
+        block_node = BlockchainNode(block_data=new_collation)
+        self._nodes[block_hash] = block_node
