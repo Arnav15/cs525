@@ -5,17 +5,16 @@ import logging
 
 class BootstrapServerProtocol(asyncio.Protocol):
 
-    BOOTSTRAP_NODE_IP = '126.2.2.2'
     BOOTSTRAP_NODE_PORT = 8888
 
-    def __init__(self):
-        self.nodes = list()
+    def __init__(self, nodes):
+        self.nodes = nodes
 
     def connection_made(self, transport):
-        ip = transport.get_extra_info('peername')
+        ip = transport.get_extra_info('peername')[0]
         print(f'Got connection from {ip}')
         transport.write(pickle.dumps(self.nodes))
-        self.nodes.append()
+        self.nodes.add(ip)
         transport.close()
 
 
@@ -27,7 +26,7 @@ class Network:
             self.node = node
 
         def connection_made(self, transport):
-            ip = transport.get_extra_info('peername')
+            ip = transport.get_extra_info('peername')[0]
             self.node.network.connections[ip] = transport
 
         def connection_lost(self, exc):
@@ -46,7 +45,7 @@ class Network:
 
     DEFAULT_PORT = 9991
 
-    BOOTSTRAP_NODE_IP = '126.2.2.2'
+    BOOTSTRAP_NODE_IP = '0.0.0.0'
     BOOTSTRAP_NODE_PORT = 8888
 
     def __init__(self, node, evloop):
@@ -62,6 +61,7 @@ class Network:
 
         data = await reader.read()
         self.connections = dict.fromkeys(pickle.loads(data))
+        print(f'Received connections: {self.connections}')
         writer.close()
 
     async def create_connections(self):

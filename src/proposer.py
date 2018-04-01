@@ -16,9 +16,12 @@ class Proposer(object):
 
     RSA_KEY_FILE = 'rsakey.pem'
 
-    def __init__(self, port=None, rsa_key_file=Proposer.RSA_KEY_FILE):
+    def __init__(self, port=None, rsa_key_file=None):
         self.logger = logging.getLogger(Proposer.__name__)
         self.evloop = asyncio.get_event_loop()
+
+        if rsa_key_file is None:
+            rsa_key_file = Proposer.RSA_KEY_FILE
 
         self.state = State()
         self.transient_state = State()
@@ -28,7 +31,7 @@ class Proposer(object):
 
         if self.rsa_key is None:
             self.rsa_key = utils.generate_rsa_key()
-            utils.save_rsa_key(self.rsa_key)
+            utils.save_rsa_key(self.rsa_key, rsa_key_file)
 
         # get and create connections
         self.network = Network(self, self.evloop)

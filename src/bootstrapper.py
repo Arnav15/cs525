@@ -7,9 +7,12 @@ from discovery import BootstrapServerProtocol
 
 def main(args):
     loop = asyncio.get_event_loop()
+    nodes = set()
 
-    loop.create_server(BootstrapServerProtocol, host='0.0.0.0',
-                       port=BootstrapServerProtocol.BOOTSTRAP_NODE_PORT)
+    coro = loop.create_server(
+        lambda: BootstrapServerProtocol(nodes), host='0.0.0.0',
+        port=BootstrapServerProtocol.BOOTSTRAP_NODE_PORT)
+    loop.run_until_complete(coro)
 
     try:
         loop.run_forever()

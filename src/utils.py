@@ -12,13 +12,13 @@ def generate_rsa_key():
 def get_rsa_key(rsa_key_file):
     key = None
     if os.path.isfile(rsa_key_file):
-        with open(rsa_key_file) as f:
+        with open(rsa_key_file, 'rb') as f:
             key = RSA.importKey(f.read())
     return key
 
 
 def save_rsa_key(rsa_key, rsa_key_file):
-    with open(rsa_key_file, 'w') as f:
+    with open(rsa_key_file, 'wb') as f:
         f.write(rsa_key.exportKey('PEM'))
 
 
