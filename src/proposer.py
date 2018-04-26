@@ -97,12 +97,13 @@ class Proposer(object):
 
     def _verify_collation(self, new_collation):
         # verify block hash
-        
+
         # verify signature
 
         # verify txns merkle root
 
         # verify txns
+        pass
 
     def handle_collation(self, collation):
         # check if the parent hash of the collation is the current root
