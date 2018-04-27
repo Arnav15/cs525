@@ -50,7 +50,7 @@ class Network:
 
     DEFAULT_PORT = 9991
 
-    BOOTSTRAP_NODE_IP = 'sp18-cs525-g05-01'
+    BOOTSTRAP_NODE_IP = 'sp18-cs525-g05-01.cs.illinois.edu'
     BOOTSTRAP_NODE_PORT = 8888
 
     def __init__(self, node, evloop):
