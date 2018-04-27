@@ -3,3 +3,4 @@ __pycache__/
 .vscode/
 *.sublime-project
 *.pem
+.vagrant/
