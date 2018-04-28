@@ -72,10 +72,13 @@ class Network:
     async def create_connections(self):
         new_connections = dict()
         for node in self.connections.keys():
-            transport, protocol = await self.evloop.create_connection(
-                lambda: Network.NetworkProtocol(self.node),
-                host=node, port=Network.DEFAULT_PORT)
-            new_connections[node] = transport
+            try:
+                transport, protocol = await self.evloop.create_connection(
+                    lambda: Network.NetworkProtocol(self.node),
+                    host=node, port=Network.DEFAULT_PORT)
+                new_connections[node] = transport
+            except ConnectionRefusedError:
+                print(f'Could not connect to {node}')
         self.connections.update(new_connections)
 
     async def create_endpoint(self, port):
