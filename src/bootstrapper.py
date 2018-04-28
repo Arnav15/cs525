@@ -1,5 +1,6 @@
 import argparse
 import asyncio
+import logging
 import sys
 
 from p2p import BootstrapServerProtocol
@@ -31,6 +32,9 @@ def parse_arguments():
     parser.add_argument('--log-file',
                         dest='log_file', default='/tmp/bootstrapper.log',
                         help='The file to write output log to')
+    parser.add_argument('--log-level',
+                        dest='log_level', default='INFO', help='The log level',
+                        choices=['DEBUG', 'INFO', 'WARNING'])
 
     return parser.parse_args()
 
