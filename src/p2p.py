@@ -8,6 +8,7 @@ class BootstrapServerProtocol(asyncio.Protocol):
     BOOTSTRAP_NODE_PORT = 8888
 
     def __init__(self, nodes):
+        self.logger = logging.getLogger(BootstrapServerProtocol.__name__)
         self.nodes = nodes
 
     def connection_made(self, transport):
