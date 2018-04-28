@@ -32,7 +32,7 @@ class Transaction(BlockchainObject):
                 f'value={self.value},txn_id={self.txn_id}')
 
     def to_pickle(self):
-        pickle.dump(self, protocol=pickle.HIGHEST_PROTOCOL)
+        return pickle.dumps(self, protocol=pickle.HIGHEST_PROTOCOL)
 
     def serialize(self):
         items = [self.src_pk, self.dst_pk, self.value]
@@ -57,7 +57,7 @@ class CollationHeader(BlockchainObject):
         self.collation_id = None
 
     def to_pickle(self):
-        pickle.dump(self, protocol=pickle.HIGHEST_PROTOCOL)
+        return pickle.dumps(self, protocol=pickle.HIGHEST_PROTOCOL)
 
     def serialize(self):
         items = [self.shard_id, self.parent_hash, self.txns_merkle_root,
@@ -96,7 +96,7 @@ class Collation(BlockchainObject):
         self.header.collation_id = utils.generate_hash(self.serialize())
 
     def to_pickle(self):
-        pickle.dump(self, protocol=pickle.HIGHEST_PROTOCOL)
+        return pickle.dumps(self, protocol=pickle.HIGHEST_PROTOCOL)
 
     def serialize(self):
         items = list()
@@ -121,7 +121,7 @@ class State(BlockchainObject):
         return self.utxo.pop(coin_id)
 
     def to_pickle(self):
-        pickle.dump(self, protocol=pickle.HIGHEST_PROTOCOL)
+        return pickle.dumps(self, protocol=pickle.HIGHEST_PROTOCOL)
 
     def serialize(self):
         pass
@@ -137,7 +137,7 @@ class Coin(BlockchainObject):
         self.coin_id = utils.generate_hash(self.serialize())
 
     def to_pickle(self):
-        pickle.dump(self, protocol=pickle.HIGHEST_PROTOCOL)
+        pickle.dumps(self, protocol=pickle.HIGHEST_PROTOCOL)
 
     def serialize(self):
         items = [self.owner, self.value, self.parent_txn]
