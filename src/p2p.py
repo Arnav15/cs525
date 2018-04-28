@@ -12,7 +12,7 @@ class BootstrapServerProtocol(asyncio.Protocol):
 
     def connection_made(self, transport):
         ip = transport.get_extra_info('peername')[0]
-        print(f'Got connection from {ip}')
+        self.logger.info(f'Got connection from {ip}')
         transport.write(pickle.dumps(self.nodes))
         self.nodes.add(ip)
         transport.close()
@@ -54,6 +54,7 @@ class Network:
     BOOTSTRAP_NODE_PORT = 8888
 
     def __init__(self, node, evloop):
+        self.logger = logging.getLogger(Network.__name__)
         self.connections = dict()
         self.node = node
         self.evloop = evloop
@@ -66,7 +67,7 @@ class Network:
 
         data = await reader.read()
         self.connections = dict.fromkeys(pickle.loads(data))
-        print(f'Received connections: {self.connections}')
+        self.logger.info(f'Received connections: {self.connections}')
         writer.close()
 
     async def create_connections(self):
@@ -78,7 +79,7 @@ class Network:
                     host=node, port=Network.DEFAULT_PORT)
                 new_connections[node] = transport
             except ConnectionRefusedError:
-                print(f'Could not connect to {node}')
+                self.logger.warn(f'Could not connect to {node}')
         self.connections.update(new_connections)
 
     async def create_endpoint(self, port):
@@ -89,6 +90,9 @@ class Network:
             host='0.0.0.0', port=port)
 
     def broadcast_obj(self, obj):
-        pickled = obj.to_pickle()
+        if not isinstance(obj, bytes) or not isinstance(obj, bytearray):
+            pickled = obj.to_pickle()
+        else:
+            pickled = obj
         for ip, transport in self.connections.iteritems():
             transport.write(pickled)

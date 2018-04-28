@@ -38,6 +38,9 @@ class Transaction(BlockchainObject):
         items = [self.src_pk, self.dst_pk, self.value]
         return bytearray(''.join(map(str, items)), encoding='UTF-8')
 
+    def sign(self, priv_key):
+        self.src_sig = utils.generate_signature(priv_key, self.serialize())
+
 
 @BlockchainObject.register
 class CollationHeader(BlockchainObject):

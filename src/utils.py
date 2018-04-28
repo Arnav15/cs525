@@ -37,6 +37,10 @@ def save_rsa_key(rsa_key, rsa_key_file):
         f.write(pem)
 
 
+def get_pub_key(private_key):
+    return private_key.public_key()
+
+
 def generate_signature(private_key, data):
     signature = private_key.sign(
         data,

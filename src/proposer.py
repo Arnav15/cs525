@@ -50,8 +50,11 @@ class Proposer(object):
         self.logger.error('Received message cannot be handled by Proposer')
 
     def handle_transaction(self, txn):
-        self.logger.info(f'Received transaction: {txn}')
+        if txn.txn_id in self.txn_pool:
+            self.logger.info(f'Received duplicate transaction: {txn}')
+            return
 
+        self.logger.info(f'Received transaction: {txn}')
         # verify signature
         if not utils.verify_signature(
                 txn.src_pk, txn.serialize(), txn.src_sig):
@@ -166,7 +169,7 @@ def main(args):
     loop = asyncio.get_event_loop()
 
     proposer = Proposer(args.port, args.key_file)
-    loop.create_task(proposer.create_collation())
+    # loop.create_task(proposer.create_collation())
 
     try:
         loop.run_forever()

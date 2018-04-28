@@ -2,6 +2,7 @@ import argparse
 import logging
 
 import utils
+import objects
 
 
 class Client(object):
@@ -9,11 +10,11 @@ class Client(object):
     RSA_KEY_FILE = 'rsakey.pem'
 
     def __init__(self, port=None, rsa_key_file=None):
-        self.logger = logging.getLogger(Proposer.__name__)
+        self.logger = logging.getLogger(Client.__name__)
         self.evloop = asyncio.get_event_loop()
 
         if rsa_key_file is None:
-            rsa_key_file = Proposer.RSA_KEY_FILE
+            rsa_key_file = Client.RSA_KEY_FILE
 
         self.state = State()
         self.txn_pool = list()
@@ -28,31 +29,29 @@ class Client(object):
         self.network = Network(self, self.evloop)
         self.evloop.run_until_complete(self.network.get_membership_list())
         self.evloop.run_until_complete(self.network.create_connections())
-        # create TCP endpoint for incoming connections
-        self.evloop.run_until_complete(self.network.create_endpoint(port))
 
-    def handle_message(self, message):
-        if isinstance(message, Transaction):
-            return self.handle_transaction(message)
+    def send_message(self, message):
+        while True:
+            dst_pk, value = input().split(' ')
 
-        elif isinstance(message, Collation):
-            return self.handle_collation(message)
+            # Create transaction
+            args = {
+                'src_pk': utils.get_pub_key(self.rsa_key),
+                'dst_pk': dst_pk,
+                'value': value
+            }
+            txn = Transaction(**args)
+            txn.sign(self.rsa_key)
 
-        self.logger.error('Received message cannot be handled by Proposer')
-
-    def handle_transaction(self, txn):
-        self.logger.info(f'Received transaction: {txn}')
-        # ignore transactions
-
-    def handle_collation(self, collation):
-        pass
+            # Send transaction
+            self.network.broadcast_obj(txn)
 
 
 def main(args):
     loop = asyncio.get_event_loop()
 
-    proposer = Proposer(args.port, args.key_file)
-    loop.create_task(proposer.create_collation())
+    client = Client(args.port, args.key_file)
+    loop.create_task(client.send_message())
 
     try:
         loop.run_forever()
