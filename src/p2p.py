@@ -78,9 +78,9 @@ class Network:
             new_connections[node] = transport
         self.connections.update(new_connections)
 
-    async def create_endpoint(self, port=DEFAULT_PORT):
+    async def create_endpoint(self, port):
         if port is None:
-            port = DEFAULT_PORT
+            port = Network.DEFAULT_PORT
         await self.evloop.create_server(
             lambda: Network.NetworkProtocol(self.node),
             host='0.0.0.0', port=port)
