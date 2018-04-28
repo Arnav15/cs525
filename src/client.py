@@ -1,8 +1,12 @@
 import argparse
+import asyncio
 import logging
 
 import utils
-import objects
+
+from blockchain import Blockchain
+from objects import *
+from p2p import Network
 
 
 class Client(object):
@@ -17,7 +21,6 @@ class Client(object):
             rsa_key_file = Client.RSA_KEY_FILE
 
         self.state = State()
-        self.txn_pool = list()
         self.blockchain = Blockchain()
         self.rsa_key = utils.get_rsa_key(rsa_key_file)
 
@@ -30,7 +33,7 @@ class Client(object):
         self.evloop.run_until_complete(self.network.get_membership_list())
         self.evloop.run_until_complete(self.network.create_connections())
 
-    def send_message(self, message):
+    def send_message(self, message=None):
         while True:
             dst_pk, value = input().split(' ')
 

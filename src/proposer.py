@@ -7,10 +7,11 @@ import sys
 from copy import deepcopy
 from datetime import datetime
 
+import utils
+
 from blockchain import Blockchain
 from objects import *
 from p2p import Network
-import utils
 
 
 class Proposer(object):
