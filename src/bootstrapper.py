@@ -45,10 +45,11 @@ if __name__ == '__main__':
     log_level = getattr(logging, args.log_level)
 
     # setup logging
+    fh = logging.FileHandler(args.log_file, mode='w')
+    sh = logging.StreamHandler()
     logging.basicConfig(
         level=log_level,
         format='%(levelname)s | %(asctime)s | %(name)s | %(message)s',
-        filename=args.log_file,
-        filemode='w')
+        handlers=[fh, sh])
 
     main(args)
