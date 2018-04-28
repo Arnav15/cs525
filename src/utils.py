@@ -77,6 +77,8 @@ def verify_signature(public_key, data, sig):
 
 
 def generate_hash(byte_data):
+    if not isinstance(byte_data, bytes):
+        byte_data = bytes(byte_data)
     digest = hashes.Hash(hashes.SHA256(), backend=default_backend())
     digest.update(byte_data)
     return digest.finalize()
