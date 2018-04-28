@@ -38,7 +38,10 @@ def save_rsa_key(rsa_key, rsa_key_file):
 
 
 def get_pub_key(private_key):
-    return private_key.public_key()
+    return private_key.public_key().public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo
+    )
 
 
 def generate_signature(private_key, data):
