@@ -28,11 +28,23 @@ def parse_arguments():
     parser.add_argument('-p', '--port',
                         dest='port', default=None,
                         help='Port to use to listen for incoming connections')
+    parser.add_argument('--log-file',
+                        dest='log_file', default='/tmp/bootstrapper.log',
+                        help='The file to write output log to')
 
     return parser.parse_args()
 
 
 if __name__ == '__main__':
     args = parse_arguments()
+
+    log_level = getattr(logging, args.log_level)
+
+    # setup logging
+    logging.basicConfig(
+        level=log_level,
+        format='%(levelname)s | %(asctime)s | %(name)s | %(message)s',
+        filename=args.log_file,
+        filemode='w')
 
     main(args)

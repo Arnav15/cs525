@@ -71,7 +71,7 @@ def parse_arguments():
                         dest='key_file', default=None,
                         help='The .pem key file for this Client')
     parser.add_argument('--log-file',
-                        dest='log_file', default='client.log',
+                        dest='log_file', default='/tmp/client.log',
                         help='The file to write output log to')
     parser.add_argument('--log-level',
                         dest='log_level', default='INFO', help='The log level',
