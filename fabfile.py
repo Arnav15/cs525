@@ -17,6 +17,11 @@ def git_pull():
     with cd('/opt/blockchain'):
         sudo('git pull')
 
+def git_pull_force():
+    with cd('/opt/blockchain'):
+        sudo('git fetch --all')
+        sudo('git reset --hard origin/master')
+
 def install_py36():
     sudo('yum -y install https://centos7.iuscommunity.org/ius-release.rpm')
     sudo('yum -y install python36u python36u-pip')
