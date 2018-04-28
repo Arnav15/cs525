@@ -40,7 +40,7 @@ class Network:
 
         def data_received(self, data):
             try:
-                message = pickle.load(data)
+                message = pickle.loads(data)
             except pickle.UnpicklingError:
                 self.logger.error('Message parsing error')
 
@@ -81,7 +81,7 @@ class Network:
                 new_connections[node] = transport
             except ConnectionRefusedError:
                 self.logger.warn(f'Could not connect to {node}')
-        self.connections.update(new_connections)
+        self.connections = new_connections
 
     async def create_endpoint(self, port):
         if port is None:
@@ -95,5 +95,5 @@ class Network:
             pickled = obj.to_pickle()
         else:
             pickled = obj
-        for ip, transport in self.connections.iteritems():
+        for ip, transport in self.connections.items():
             transport.write(pickled)
