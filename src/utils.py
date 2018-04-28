@@ -42,6 +42,9 @@ def get_pub_key(private_key):
 
 
 def generate_signature(private_key, data):
+    if not isinstance(data, bytes):
+        data = bytes(data)
+
     signature = private_key.sign(
         data,
         padding.PSS(
@@ -54,6 +57,9 @@ def generate_signature(private_key, data):
 
 
 def verify_signature(public_key, data, sig):
+    if not isinstance(data, bytes):
+        data = bytes(data)
+
     if not (isinstance(public_key, rsa.RSAPublicKey) or
             isinstance(public_key, rsa.RSAPublicKeyWithSerialization)):
         public_key = serialization.load_pem_public_key(
@@ -76,11 +82,11 @@ def verify_signature(public_key, data, sig):
     return True
 
 
-def generate_hash(byte_data):
-    if not isinstance(byte_data, bytes):
-        byte_data = bytes(byte_data)
+def generate_hash(data):
+    if not isinstance(data, bytes):
+        data = bytes(data)
     digest = hashes.Hash(hashes.SHA256(), backend=default_backend())
-    digest.update(byte_data)
+    digest.update(data)
     return digest.finalize()
 
 
