@@ -7,9 +7,8 @@ import sys
 from copy import deepcopy
 from datetime import datetime
 
-import utils
-
 from blockchain import Blockchain
+from crypto import RSA
 from objects import *
 from p2p import Network
 
@@ -28,11 +27,11 @@ class Proposer(object):
         self.state = State()
         self.txn_pool = dict()
         self.blockchain = Blockchain()
-        self.rsa_key = utils.get_rsa_key(rsa_key_file)
+        self.rsa_key = RSA.get_rsa_key(rsa_key_file)
 
         if self.rsa_key is None:
-            self.rsa_key = utils.generate_rsa_key()
-            utils.save_rsa_key(self.rsa_key, rsa_key_file)
+            self.rsa_key = RSA.generate_rsa_key()
+            RSA.save_rsa_key(self.rsa_key, rsa_key_file)
 
         # get and create connections
         self.network = Network(self, self.evloop)
@@ -57,7 +56,7 @@ class Proposer(object):
 
         self.logger.info(f'Received transaction: {txn}')
         # verify signature
-        if not utils.verify_signature(
+        if not RSA.verify_signature(
                 txn.src_pk, txn.serialize(), txn.src_sig):
             self.logger.warn('Invalid signature')
             return False
@@ -134,7 +133,7 @@ class Proposer(object):
                 continue
 
             def sign_callable(data):
-                return utils.generate_signature(self.rsa_key, data)
+                return RSA.generate_signature(self.rsa_key, data)
 
             txns = dict()
             num_txns = 0

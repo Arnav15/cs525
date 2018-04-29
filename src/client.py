@@ -2,9 +2,8 @@ import argparse
 import asyncio
 import logging
 
-import utils
-
 from blockchain import Blockchain
+from crypto import RSA
 from objects import *
 from p2p import Network
 
@@ -22,11 +21,11 @@ class Client(object):
 
         self.state = State()
         self.blockchain = Blockchain()
-        self.rsa_key = utils.get_rsa_key(rsa_key_file)
+        self.rsa_key = RSA.get_rsa_key(rsa_key_file)
 
         if self.rsa_key is None:
-            self.rsa_key = utils.generate_rsa_key()
-            utils.save_rsa_key(self.rsa_key, rsa_key_file)
+            self.rsa_key = RSA.generate_rsa_key()
+            RSA.save_rsa_key(self.rsa_key, rsa_key_file)
 
         # get and create connections
         self.network = Network(self, self.evloop)
@@ -39,7 +38,7 @@ class Client(object):
 
             # Create transaction
             args = {
-                'src_pk': utils.get_pub_key(self.rsa_key),
+                'src_pk': RSA.get_pub_key(self.rsa_key),
                 'dst_pk': dst_pk,
                 'value': value
             }

@@ -1,7 +1,7 @@
 import abc
 import pickle
 
-import utils
+from crypto import generate_hash, RSA
 
 
 class BlockchainObject(abc.ABC):
@@ -25,7 +25,7 @@ class Transaction(BlockchainObject):
         self.inputs = inputs
         self.value = value
         self.src_sig = src_sig
-        self.txn_id = utils.generate_hash(self.serialize())
+        self. generate_hash(self.serialize())
 
     def __str__(self):
         return (f'src_pk={self.src_pk},dst_pk={self.dst_pk},'
@@ -39,7 +39,7 @@ class Transaction(BlockchainObject):
         return bytearray(''.join(map(str, items)), encoding='UTF-8')
 
     def sign(self, priv_key):
-        self.src_sig = utils.generate_signature(priv_key, self.serialize())
+        self.src_sig = RSA.generate_signature(priv_key, self.serialize())
 
 
 @BlockchainObject.register
@@ -80,7 +80,7 @@ class Collation(BlockchainObject):
         self.txns = txns
         if txns_merkle_root is None:
             # generate the merkle root
-            txns_merkle_root = utils.merkle_root(txns)
+            # txns_merkle_root = merkle_root(txns)
 
         self.header = CollationHeader(
             shard_id=shard_id, parent_hash=parent_hash,
@@ -93,7 +93,7 @@ class Collation(BlockchainObject):
             self.header.proposer_sig = sign_callable(self.serialize())
 
         # generate the collation hash (id)
-        self.header.collation_id = utils.generate_hash(self.serialize())
+        self.header.collation_id = generate_hash(self.serialize())
 
     def to_pickle(self):
         return pickle.dumps(self, protocol=pickle.HIGHEST_PROTOCOL)
@@ -134,7 +134,7 @@ class Coin(BlockchainObject):
         self.owner = owner
         self.value = value
         self.parent_txn = parent_txn
-        self.coin_id = utils.generate_hash(self.serialize())
+        self.coin_id = generate_hash(self.serialize())
 
     def to_pickle(self):
         pickle.dumps(self, protocol=pickle.HIGHEST_PROTOCOL)
