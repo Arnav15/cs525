@@ -25,7 +25,7 @@ class Transaction(BlockchainObject):
         self.inputs = inputs
         self.value = value
         self.src_sig = src_sig
-        self. generate_hash(self.serialize())
+        self.txn_id = generate_hash(self.serialize())
 
     def __str__(self):
         return (f'src_pk={self.src_pk},dst_pk={self.dst_pk},'
@@ -81,6 +81,7 @@ class Collation(BlockchainObject):
         if txns_merkle_root is None:
             # generate the merkle root
             # txns_merkle_root = merkle_root(txns)
+            pass
 
         self.header = CollationHeader(
             shard_id=shard_id, parent_hash=parent_hash,

@@ -1,10 +1,11 @@
 import argparse
 import asyncio
 import logging
+import sys
 
 from blockchain import Blockchain
 from crypto import RSA
-from objects import *
+from objects import State, Transaction
 from p2p import Network
 
 
