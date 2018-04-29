@@ -1,10 +1,10 @@
 FROM python:3.6.5
 
-WORKDIR /usr/src/app
+WORKDIR /opt/blockchain
 
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-CMD [ "python3", "src/proposer.py" ]
+CMD [ "python3", "antimatter/proposer.py" ]
