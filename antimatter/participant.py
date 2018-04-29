@@ -11,18 +11,19 @@ from blockchain import Blockchain
 from crypto import RSA
 from objects import *
 from p2p import Network
+from shard import Shard
 
 
-class Proposer(object):
+class Participant(object):
 
     RSA_KEY_FILE = 'rsakey.pem'
 
     def __init__(self, port=None, rsa_key_file=None):
-        self.logger = logging.getLogger(Proposer.__name__)
+        self.logger = logging.getLogger(Participant.__name__)
         self.evloop = asyncio.get_event_loop()
 
         if rsa_key_file is None:
-            rsa_key_file = Proposer.RSA_KEY_FILE
+            rsa_key_file = Participant.RSA_KEY_FILE
 
         self.state = State()
         self.txn_pool = dict()
@@ -33,6 +34,9 @@ class Proposer(object):
             self.rsa_key = RSA.generate_rsa_key()
             RSA.save_rsa_key(self.rsa_key, rsa_key_file)
 
+        # initialize epoch number and shard object
+        self.epoch_number = 0
+        self.shard = Shard()
         # get and create connections
         self.network = Network(self, self.evloop)
         self.evloop.run_until_complete(self.network.get_membership_list())
@@ -46,6 +50,9 @@ class Proposer(object):
 
         elif isinstance(message, Collation):
             return self.handle_collation(message)
+
+        elif isinstance(message, CollationVote):
+            return self.handle_collation_vote(message)
 
         self.logger.error('Received message cannot be handled by Proposer')
 
@@ -64,6 +71,10 @@ class Proposer(object):
         # transaction successfully added
         self.txn_pool[txn.txn_id] = txn
         self.network.broadcast_obj(txn)
+
+    def _verify_txn_in_shard(self, src_pk):
+        return int(bytes(src_pk)) % Shard.TOTAL_SHARDS == \
+               self.shard.shard_number
 
     def _validate_txn(self, transient_state, txn):
         total_input_value = 0.
@@ -109,26 +120,19 @@ class Proposer(object):
         pass
 
     def handle_collation(self, collation):
-        # check if the parent hash of the collation is the current root
-        if collation.header.parent_hash == self.blockchain.get_head():
-            self._verify_collation(collation)
-            self.blockchain.add_collation(collation)
+        pass
 
-            # update txn pool
-            for txn in collation.txns:
-                if txn in self.txn_pool:
-                    del self.txn_pool[txn]
-        else:
-            self.blockchain.add_fork_node(collation)
+    def handle_collation_vote(self, collation):
+        pass
 
     async def create_collation(self):
         while True:
-            if len(self.txn_pool) < Collation.MAX_TXN_COUNT:
+            # check if the node is a proposer
+            if not self.shard.is_proposer:
                 yield
                 continue
 
-            # RANDOM DELAY
-            while random.randint(1, 100) != 10:
+            if len(self.txn_pool) < Collation.MAX_TXN_COUNT:
                 yield
                 continue
 
@@ -138,9 +142,12 @@ class Proposer(object):
             txns = dict()
             num_txns = 0
             transient_state = deepcopy(self.state)
-            while num_txns < Collation.MAX_TXN_COUNT and len(self.txn_pool) > 0:
+            while num_txns < Collation.MAX_TXN_COUNT and \
+                    len(self.txn_pool) > 0:
                 new_txn_id, new_txn = self.txn_pool.popitem()
-                if _validate_txn(transient_state, new_txn):
+                # verify new txn is valid and belongs to the proposer's shard
+                if _verify_txn_in_shard(new_txn.src_pk) and \
+                   _validate_txn(transient_state, new_txn):
                     txns[new_txn_id] = new_txn
                     num_txns += 1
 
@@ -150,26 +157,21 @@ class Proposer(object):
                 continue
 
             collation = Collation(
-                shard_id=0,
+                shard_id=self.shard.shard_number,
                 parent_hash=self.blockchain.get_head(),
                 sign_callable=sign_callable,
                 creation_timestamp=datetime.now().isoformat(),
                 txns=txns.values())
 
-            # add this collation to the chain
-            self.blockchain.add_collation(collation)
-            self.state = transient_state
-
             self.network.broadcast_obj(collation)
-
             yield
 
 
 def main(args):
     loop = asyncio.get_event_loop()
 
-    proposer = Proposer(args.port, args.key_file)
-    # loop.create_task(proposer.create_collation())
+    participant = Participant(args.port, args.key_file)
+    # loop.create_task(participant.create_collation())
 
     try:
         loop.run_forever()
@@ -180,16 +182,16 @@ def main(args):
 
 
 def parse_arguments():
-    parser = argparse.ArgumentParser(description='AuntyMatter Proposer')
+    parser = argparse.ArgumentParser(description='AuntyMatter Participant')
 
     parser.add_argument('-p', '--port',
                         dest='port', default=None,
                         help='Port to use to listen for incoming connections')
     parser.add_argument('--key-file',
                         dest='key_file', default=None,
-                        help='The .pem key file for this Proposer')
+                        help='The .pem key file for this Participant')
     parser.add_argument('--log-file',
-                        dest='log_file', default='/tmp/proposer.log',
+                        dest='log_file', default='/tmp/participant.log',
                         help='The file to write output log to')
     parser.add_argument('--log-level',
                         dest='log_level', default='INFO', help='The log level',

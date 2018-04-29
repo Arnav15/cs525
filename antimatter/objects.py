@@ -143,3 +143,26 @@ class Coin(BlockchainObject):
     def serialize(self):
         items = [self.owner, self.value, self.parent_txn]
         return bytearray(''.join(map(str, items)), encoding='UTF-8')
+
+
+@BlockchainObject.register
+class CollationVote(BlockchainObject):
+
+    def __init__(self, collation_header, collator_pk, shard_number, proof,
+                 sign_callable=None, collator_sig=None):
+        self.header = collation_header
+        self.collator_pk = collator_pk
+        self.shard_number = shard_number
+        self.proof = proof
+
+        # if no signature was provided, create it
+        if collator_sig is None:
+            self.collator_sig = sign_callable(self.serialize())
+
+    def to_pickle(self):
+        return pickle.dumps(self, protocol=pickle.HIGHEST_PROTOCOL)
+
+    def serialize(self):
+        items = [self.header.serialize(), self.collator_pk,
+                 self.shard_number, self.proof]
+        return bytearray(''.join(map(str, items)), encoding='UTF-8')

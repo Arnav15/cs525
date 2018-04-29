@@ -6,7 +6,6 @@ class Blockchain(object):
             self.data = block_data
             self.child_hash = child_hash
 
-
     def __init__(self):
         self._nodes = dict()
         self.head = None
