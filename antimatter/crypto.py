@@ -14,6 +14,12 @@ def generate_hash(data):
 
 class RSA:
     def generate_rsa_key():
+        """Generate a new RSA private key
+
+        Returns:
+            rsa.RSAPrivateKey: The RSA private key object
+        """
+
         return rsa.generate_private_key(
             public_exponent=65537,
             key_size=2048,
