@@ -3,6 +3,6 @@ __pycache__/
 *.log
 .vscode/
 *.sublime-project
-*.pem
+./*.pem
 .vagrant/
 *.pyc
