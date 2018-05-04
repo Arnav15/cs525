@@ -13,17 +13,44 @@ spec:
     metadata:
       labels:
         app: antimatter
+        appDns: antimatter
     spec:
       terminationGracePeriodSeconds: 10
       containers:
       - image: srujun/antimatter:latest
         name: antimatter
-        imagePullPolicy: Never
+        imagePullPolicy: Never # remove
         ports:
-        - name: proto
+        - name: peer
           containerPort: 9991
-# A headless service to create DNS records
+        - name: client
+          containerPort: 9995
 ---
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: antimatter-client
+  namespace: antimatter-ns
+  labels:
+    app: antimatter-client
+    appDns: antimatter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: antimatter-client
+  template:
+    metadata:
+      labels:
+        app: antimatter-client
+        appDns: antimatter
+    spec:
+      containers:
+      - image: srujun/antimatter-client:latest
+        name: antimatter-client
+        imagePullPolicy: Never # remove
+---
+# A headless service to create DNS records
 apiVersion: v1
 kind: Service
 metadata:
@@ -31,9 +58,11 @@ metadata:
   namespace: antimatter-ns
 spec:
   ports:
-  - name: proto
+  - name: peer
     port: 9991
+  - name: client
+    port: 9995
   # [podname].antimatter-svc.antimatter-ns.svc.cluster.local
   clusterIP: None
   selector:
-    app: antimatter
+    appDns: antimatter

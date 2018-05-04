@@ -13,6 +13,7 @@ def generate_hash(data):
 
 
 class RSA:
+    @staticmethod
     def generate_rsa_key():
         """Generate a new RSA private key
 
@@ -26,6 +27,7 @@ class RSA:
             backend=default_backend()
         )
 
+    @staticmethod
     def get_rsa_key(rsa_key_file):
         try:
             with open(rsa_key_file, 'rb') as f:
@@ -35,9 +37,10 @@ class RSA:
                     backend=default_backend()
                 )
                 return private_key
-        except:
+        except Exception:
             return None
 
+    @staticmethod
     def save_rsa_key(rsa_key, rsa_key_file):
         pem = rsa_key.private_bytes(
             encoding=serialization.Encoding.PEM,
@@ -47,12 +50,23 @@ class RSA:
         with open(rsa_key_file, 'wb') as f:
             f.write(pem)
 
-    def get_pub_key(private_key):
-        return private_key.public_key().public_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo
-        )
+    @staticmethod
+    def get_pub_key_bytes(key):
+        if isinstance(key, rsa.RSAPrivateKey):
+            return key.public_key().public_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PublicFormat.SubjectPublicKeyInfo
+            )
+        elif isinstance(key, rsa.RSAPublicKey):
+            return key.public_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PublicFormat.SubjectPublicKeyInfo
+            )
+        else:
+            raise TypeError(('key should be either rsa.RSAPrivateKey'
+                             ' or rsa.RSAPublicKey'))
 
+    @staticmethod
     def generate_signature(private_key, data):
         if not isinstance(data, bytes):
             data = bytes(data)
@@ -67,6 +81,7 @@ class RSA:
         )
         return signature
 
+    @staticmethod
     def verify_signature(public_key, data, sig):
         if not isinstance(data, bytes):
             data = bytes(data)
@@ -136,7 +151,7 @@ class VRF:
                 ),
                 hashes.SHA256()
             )
-        except:
+        except Exception:
             return False
 
         digest = hashes.Hash(hashes.SHA256(), backend=default_backend())

@@ -12,7 +12,7 @@ def main(args):
 
     coro = loop.create_server(
         lambda: BootstrapServerProtocol(nodes), host='0.0.0.0',
-        port=BootstrapServerProtocol.BOOTSTRAP_NODE_PORT)
+        port=BootstrapServerProtocol.BOOTSTRAP_PORT)
     loop.run_until_complete(coro)
 
     try:

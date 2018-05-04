@@ -29,13 +29,14 @@ class Transaction(BlockchainObject):
 
     def __str__(self):
         return (f'src_pk={self.src_pk},dst_pk={self.dst_pk},'
-                f'value={self.value},txn_id={self.txn_id}')
+                f'inputs={self.inputs},value={self.value},'
+                f'src_sig={self.src_sig},txn_id={self.txn_id}')
 
     def to_pickle(self):
         return pickle.dumps(self, protocol=pickle.HIGHEST_PROTOCOL)
 
     def serialize(self):
-        items = [self.src_pk, self.dst_pk, self.value]
+        items = [self.src_pk, self.dst_pk, self.inputs, self.value]
         return bytearray(''.join(map(str, items)), encoding='UTF-8')
 
     def sign(self, priv_key):

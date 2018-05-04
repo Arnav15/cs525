@@ -1,60 +1,89 @@
 import argparse
 import asyncio
+import glob
 import logging
+import random
 import sys
+import time
 
 from blockchain import Blockchain
 from crypto import RSA
 from objects import State, Transaction
-from p2p import Network
+from p2p import Network, NetworkClientProtocol
 
 
 class Client(object):
 
-    RSA_KEY_FILE = 'rsakey.pem'
+    TPS = 0.1
 
-    def __init__(self, port=None, rsa_key_file=None):
+    def __init__(self, rsa_key_file=None):
         self.logger = logging.getLogger(Client.__name__)
         self.evloop = asyncio.get_event_loop()
 
-        if rsa_key_file is None:
-            rsa_key_file = Client.RSA_KEY_FILE
+        self.priv_key = None
+        if rsa_key_file is not None:
+            # use the supplied keyfile
+            self.priv_key = RSA.get_rsa_key(rsa_key_file)
+
+        # load the private key files
+        self.keys = set()
+        # read the client keys
+        for key_file in glob.glob('client_keys/*.pem'):
+            if key_file == rsa_key_file:
+                continue
+            self.keys.add(RSA.get_rsa_key(key_file))
 
         self.state = State()
         self.blockchain = Blockchain()
-        self.rsa_key = RSA.get_rsa_key(rsa_key_file)
-
-        if self.rsa_key is None:
-            self.rsa_key = RSA.generate_rsa_key()
-            RSA.save_rsa_key(self.rsa_key, rsa_key_file)
 
         # get and create connections
         self.network = Network(self, self.evloop)
-        self.evloop.run_until_complete(self.network.get_membership_list())
-        self.evloop.run_until_complete(self.network.create_connections())
+        self.evloop.run_until_complete(
+            self.network.create_connections(NetworkClientProtocol.CLIENT_PORT))
 
-    def send_message(self, message=None):
+    def handle_message(self, message):
+        if isinstance(message, Transaction):
+            return self.handle_transaction(message)
+
+        self.logger.error('Received message cannot be handled by Client')
+
+    async def send_txns(self):
         while True:
-            dst_pk, value = input().split(' ')
+            if self.priv_key is None:
+                src_key, dst_key = random.sample(self.keys, 2)
+            else:
+                src_key = self.priv_key
+                dst_key = random.sample(self.keys, 1)
+
+            dst_key = dst_key.public_key()
+            value = random.uniform(1., 10.)
 
             # Create transaction
             args = {
-                'src_pk': RSA.get_pub_key(self.rsa_key),
-                'dst_pk': dst_pk,
-                'value': value
+                'src_pk': RSA.get_pub_key_bytes(src_key),
+                'dst_pk': RSA.get_pub_key_bytes(dst_key),
+                'value': value,
+                # 'inputs': ???
             }
             txn = Transaction(**args)
-            txn.sign(self.rsa_key)
+            txn.sign(src_key)
+            self.logger.info(f'Created txn: {txn}')
 
             # Send transaction
             self.network.broadcast_obj(txn)
 
+            # sleep until next transaction
+            await asyncio.sleep(1 / Client.TPS)
+
 
 def main(args):
+    # add delay so that participants can bootstrap themselves
+    time.sleep(10)
+
     loop = asyncio.get_event_loop()
 
-    client = Client(args.port, args.key_file)
-    loop.create_task(client.send_message())
+    client = Client(args.key_file)
+    loop.create_task(client.send_txns())
 
     try:
         loop.run_forever()
@@ -65,11 +94,8 @@ def main(args):
 
 
 def parse_arguments():
-    parser = argparse.ArgumentParser(description='AuntyMatter Client')
+    parser = argparse.ArgumentParser(description='AntiMatter Client')
 
-    parser.add_argument('-p', '--port',
-                        dest='port', default=None,
-                        help='Port to use to listen for incoming connections')
     parser.add_argument('--key-file',
                         dest='key_file', default=None,
                         help='The .pem key file for this Client')
