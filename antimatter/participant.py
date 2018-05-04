@@ -37,12 +37,15 @@ class Participant(object):
         # initialize epoch number and shard object
         self.epoch_number = 0
         self.shard = Shard()
-        # get and create connections
+
         self.network = Network(self, self.evloop)
-        self.evloop.run_until_complete(self.network.get_membership_list())
-        self.evloop.run_until_complete(self.network.create_connections())
+
         # create TCP endpoint for incoming connections
         self.evloop.run_until_complete(self.network.create_endpoint(port))
+
+        # start connecting to other nodes
+        # self.evloop.run_until_complete(self.network.get_membership_list())
+        self.evloop.run_until_complete(self.network.create_connections())
 
     def handle_message(self, message):
         if isinstance(message, Transaction):
@@ -171,7 +174,7 @@ def main(args):
     loop = asyncio.get_event_loop()
 
     participant = Participant(args.port, args.key_file)
-    # loop.create_task(participant.create_collation())
+    loop.create_task(participant.create_collation())
 
     try:
         loop.run_forever()
@@ -182,7 +185,7 @@ def main(args):
 
 
 def parse_arguments():
-    parser = argparse.ArgumentParser(description='AuntyMatter Participant')
+    parser = argparse.ArgumentParser(description='AntiMatter Participant')
 
     parser.add_argument('-p', '--port',
                         dest='port', default=None,

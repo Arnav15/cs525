@@ -1,10 +1,10 @@
 FROM python:3.6.5
 
-WORKDIR /opt/blockchain
+COPY requirements.txt .
+COPY ./antimatter ./antimatter
 
-COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+EXPOSE 9991/tcp
 
-CMD [ "python3", "antimatter/proposer.py" ]
+CMD [ "python3", "antimatter/participant.py", "--log-level", "DEBUG" ]

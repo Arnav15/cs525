@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: antimatter
+  namespace: antimatter-ns
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: antimatter
+  serviceName: "anti-svc"
+  template:
+    metadata:
+      labels:
+        app: antimatter
+    spec:
+      terminationGracePeriodSeconds: 10
+      containers:
+      - image: srujun/antimatter:latest
+        name: antimatter
+        imagePullPolicy: Never
+        ports:
+        - name: proto
+          containerPort: 9991
+# A headless service to create DNS records
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: anti-svc
+  namespace: antimatter-ns
+spec:
+  ports:
+  - name: proto
+    port: 9991
+  # [podname].antimatter-svc.antimatter-ns.svc.cluster.local
+  clusterIP: None
+  selector:
+    app: antimatter
