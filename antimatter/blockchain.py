@@ -1,3 +1,13 @@
+import random
+
+from enum import Enum
+
+
+class Role(Enum):
+    PARTICIPANT = 0
+    PROPOSER = 1
+    COLLATOR = 2
+
 
 class Blockchain(object):
 
@@ -12,7 +22,7 @@ class Blockchain(object):
 
     def add_collation(self, new_collation):
         block_hash = new_collation.header.collation_id
-        block_node = BlockchainNode(block_data=new_collation)
+        block_node = Blockchain.BlockchainNode(block_data=new_collation)
         self._nodes[block_hash] = block_node
 
         # set the child of the current head, and change current head
@@ -24,5 +34,24 @@ class Blockchain(object):
 
     def add_fork_node(self, new_collation):
         block_hash = new_collation.header.collation_id
-        block_node = BlockchainNode(block_data=new_collation)
+        block_node = Blockchain.BlockchainNode(block_data=new_collation)
         self._nodes[block_hash] = block_node
+
+
+class Shard(object):
+
+    TOTAL_SHARDS = 3
+
+    def __init__(self, shard_number=0):
+        self.shard_number = shard_number
+        self.role = Role.PARTICIPANT
+
+    def generate_new(self, total_nodes):
+        self.shard_number = random.randrange(Shard.TOTAL_SHARDS)
+        self.role = Role.PROPOSER
+
+    def is_proposer(self):
+        return self.role == Role.PROPOSER
+
+    def is_collator(self):
+        return self.role == Role.COLLATOR

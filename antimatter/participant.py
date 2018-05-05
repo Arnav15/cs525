@@ -1,24 +1,23 @@
 import argparse
 import asyncio
 import logging
-import random
 import sys
 
 from copy import deepcopy
 from datetime import datetime
 
-from blockchain import Blockchain
+from blockchain import Blockchain, Shard
 from crypto import RSA
-from objects import *
-from p2p import Network
-from shard import Shard
+from objects import (
+    State, Transaction, Collation, CollationVote, Coin)
+from p2p import Network, NetworkProtocol, NetworkClientProtocol
 
 
 class Participant(object):
 
     RSA_KEY_FILE = 'rsakey.pem'
 
-    def __init__(self, port=None, rsa_key_file=None):
+    def __init__(self, port=None, client_port=None, rsa_key_file=None):
         self.logger = logging.getLogger(Participant.__name__)
         self.evloop = asyncio.get_event_loop()
 
@@ -37,12 +36,17 @@ class Participant(object):
         # initialize epoch number and shard object
         self.epoch_number = 0
         self.shard = Shard()
-        # get and create connections
+
         self.network = Network(self, self.evloop)
-        self.evloop.run_until_complete(self.network.get_membership_list())
-        self.evloop.run_until_complete(self.network.create_connections())
+
         # create TCP endpoint for incoming connections
         self.evloop.run_until_complete(self.network.create_endpoint(port))
+        self.evloop.run_until_complete(
+            self.network.create_client_endpoint(client_port))
+
+        # start connecting to other nodes
+        # self.evloop.run_until_complete(self.network.get_membership_list())
+        self.evloop.run_until_complete(self.network.create_connections(port))
 
     def handle_message(self, message):
         if isinstance(message, Transaction):
@@ -54,7 +58,7 @@ class Participant(object):
         elif isinstance(message, CollationVote):
             return self.handle_collation_vote(message)
 
-        self.logger.error('Received message cannot be handled by Proposer')
+        self.logger.error('Received message cannot be handled by Participant')
 
     def handle_transaction(self, txn):
         if txn.txn_id in self.txn_pool:
@@ -66,7 +70,7 @@ class Participant(object):
         if not RSA.verify_signature(
                 txn.src_pk, txn.serialize(), txn.src_sig):
             self.logger.warn('Invalid signature')
-            return False
+            return
 
         # transaction successfully added
         self.txn_pool[txn.txn_id] = txn
@@ -146,8 +150,8 @@ class Participant(object):
                     len(self.txn_pool) > 0:
                 new_txn_id, new_txn = self.txn_pool.popitem()
                 # verify new txn is valid and belongs to the proposer's shard
-                if _verify_txn_in_shard(new_txn.src_pk) and \
-                   _validate_txn(transient_state, new_txn):
+                if self._verify_txn_in_shard(new_txn.src_pk) and \
+                   self._validate_txn(transient_state, new_txn):
                     txns[new_txn_id] = new_txn
                     num_txns += 1
 
@@ -170,8 +174,8 @@ class Participant(object):
 def main(args):
     loop = asyncio.get_event_loop()
 
-    participant = Participant(args.port, args.key_file)
-    # loop.create_task(participant.create_collation())
+    participant = Participant(args.port, args.client_port, args.key_file)
+    loop.create_task(participant.create_collation())
 
     try:
         loop.run_forever()
@@ -182,11 +186,15 @@ def main(args):
 
 
 def parse_arguments():
-    parser = argparse.ArgumentParser(description='AuntyMatter Participant')
+    parser = argparse.ArgumentParser(description='AntiMatter Participant')
 
     parser.add_argument('-p', '--port',
-                        dest='port', default=None,
-                        help='Port to use to listen for incoming connections')
+                        dest='port', default=NetworkProtocol.DEFAULT_PORT,
+                        help='Port to use to listen for peer connections')
+    parser.add_argument('--client-port',
+                        dest='client_port',
+                        default=NetworkClientProtocol.CLIENT_PORT,
+                        help='Port to use to listen for client connections')
     parser.add_argument('--key-file',
                         dest='key_file', default=None,
                         help='The .pem key file for this Participant')
