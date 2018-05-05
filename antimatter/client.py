@@ -78,7 +78,7 @@ class Client(object):
 
 def main(args):
     # add delay so that participants can bootstrap themselves
-    time.sleep(10)
+    time.sleep(20)
 
     loop = asyncio.get_event_loop()
 

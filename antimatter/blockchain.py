@@ -11,6 +11,9 @@ class Role(Enum):
 
 class Blockchain(object):
 
+    # hash is 32 byte string of 0's
+    GENESIS_COLLATION_HASH = b'\x00' * 32
+
     class BlockchainNode:
         def __init__(self, block_data=None, child_hash=None):
             self.data = block_data

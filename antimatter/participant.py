@@ -48,6 +48,9 @@ class Participant(object):
         # self.evloop.run_until_complete(self.network.get_membership_list())
         self.evloop.run_until_complete(self.network.create_connections(port))
 
+        # TODO: change to number of nodes participating in epoch
+        self.shard.generate_new(len(self.network.connections))
+
     def handle_message(self, message):
         if isinstance(message, Transaction):
             return self.handle_transaction(message)
@@ -132,7 +135,7 @@ class Participant(object):
     async def create_collation(self):
         while True:
             # check if the node is a proposer
-            if not self.shard.is_proposer:
+            if not self.shard.is_proposer():
                 yield
                 continue
 

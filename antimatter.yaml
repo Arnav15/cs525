@@ -19,7 +19,6 @@ spec:
       containers:
       - image: srujun/antimatter:latest
         name: antimatter
-        imagePullPolicy: Never # remove
         ports:
         - name: peer
           containerPort: 9991
@@ -48,7 +47,6 @@ spec:
       containers:
       - image: srujun/antimatter-client:latest
         name: antimatter-client
-        imagePullPolicy: Never # remove
 ---
 # A headless service to create DNS records
 apiVersion: v1

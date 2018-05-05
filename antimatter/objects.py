@@ -28,9 +28,8 @@ class Transaction(BlockchainObject):
         self.txn_id = generate_hash(self.serialize())
 
     def __str__(self):
-        return (f'src_pk={self.src_pk},dst_pk={self.dst_pk},'
-                f'inputs={self.inputs},value={self.value},'
-                f'src_sig={self.src_sig},txn_id={self.txn_id}')
+        return (f'inputs={self.inputs},value={self.value},'
+                f'txn_id={self.txn_id}')
 
     def to_pickle(self):
         return pickle.dumps(self, protocol=pickle.HIGHEST_PROTOCOL)
@@ -166,4 +165,19 @@ class CollationVote(BlockchainObject):
     def serialize(self):
         items = [self.header.serialize(), self.collator_pk,
                  self.shard_number, self.proof]
+        return bytearray(''.join(map(str, items)), encoding='UTF-8')
+
+
+@BlockchainObject.register
+class CollationRequest(BlockchainObject):
+
+    def __init__(self, collation_id=None, latest=False):
+        self.collation_id = collation_id
+        self.latest = latest
+
+    def to_pickle(self):
+        return pickle.dumps(self, protocol=pickle.HIGHEST_PROTOCOL)
+
+    def serialize(self):
+        items = [self.collation_id, self.latest]
         return bytearray(''.join(map(str, items)), encoding='UTF-8')
